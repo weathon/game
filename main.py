@@ -1,7 +1,15 @@
+
 import openai
 from flask import Flask
 from flask import request
 import json
+import time
+
+
+def writelog(log):
+  with open("log.csv", "a") as f:
+    f.write(log+"\n")
+
 
 app = Flask(__name__)
 from flask_cors import CORS
@@ -10,7 +18,7 @@ CORS(app)
 with open("story.txt", "r") as f:
   story = f.read()
 
-openai.api_key="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"
+openai.api_key="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"
 
 
 messages_list = []
@@ -25,10 +33,11 @@ def img(prmopt):
   )
   return response['data'][0]['url']
   
-
+step = 0
 @app.route("/start")
 def start():
-  global messages_list, ans
+  global messages_list, ans, step
+  step = 0
   messages_list = [
       {
         "role": "system",
@@ -37,7 +46,7 @@ def start():
         Present the game description using following  format. Each time the text should be relatively short. 
         AND ONLY OUTPUT ONE SENSE, THEN WAIT FOR USER's INPUT. DO NOT assume user make a choice!
         THE FORMAT HAS TO BE AS FOLLOWING! USE KEYWORDS OF "IMGE" "IMAGE ENDS" "TEXT" and "CHOICES"
-
+        **User can only make decision for one charatar**
         You do not have to follow the choices and story line in the provided story! And give choices more than just what is provided.
         STORY: \n"""+story+"""
         EXAMPLE, THE FORMAT HAS TO BE AS FOLLOWING! USE KEYWORDS OF "IMGE" "IMAGE ENDS" "TEXT" and "CHOICES"
@@ -82,11 +91,16 @@ def start():
       })
   text = ans.split("TEXT: ")[1]
   text, choices = text.split("CHOICES:")
+  writelog("Game started,"+str(time.time()))
   return {"text": text, "choices":json.loads(choices), "image_url":image_url}
 
 @app.route("/choice")
 def choice():
-  global messages_list
+  global messages_list, step
+  writelog(f"Step {step} decision made,"+str(time.time()))
+
+  step+=1
+
   print(request.args.get('choice'))
   messages_list.append({
       "role": "user",
@@ -119,6 +133,21 @@ def choice():
   print(ans)
   text = ans.split("TEXT: ")[1]
   text, choices = text.split("CHOICES:")
+  # writelog(f"Step {step} generated,"+str(time.time()))
+
   return {"length":len(messages_list),"text": text, "choices":json.loads(choices), "image_url":image_url}
     
 
+@app.route("/summary")
+def summary():
+
+  with open("log.csv", "r") as f:
+    data = f.read().split("\n")
+
+  sum = 0
+  count = 0.0000001
+  for i in range(1, len(data)):
+    sum+=float(data[i].split(",")[1])-float(data[i-1].split(",")[1])
+    count+=1
+  
+  return "Your Average Decision time is "+str(sum/count)+"seconds"
