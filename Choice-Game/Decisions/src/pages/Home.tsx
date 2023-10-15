@@ -44,22 +44,19 @@ const Home: React.FC = () => {
       </IonContent>
       <IonFooter>
         <IonButton
-          expand="full"
-          color={selectedOption === 'option1' ? 'primary' : 'medium'}
+          expand="block"
           onClick={() => handleButtonClick('option1')}
         >
           Option 1
         </IonButton>
         <IonButton
-          expand="full"
-          color={selectedOption === 'option2' ? 'primary' : 'medium'}
+          expand="block"
           onClick={() => handleButtonClick('option2')}
         >
           Option 2
         </IonButton>
         <IonButton
-          expand="full"
-          color={selectedOption === 'option3' ? 'primary' : 'medium'}
+          expand="block"
           onClick={() => handleButtonClick('option3')}
         >
           Option 3
