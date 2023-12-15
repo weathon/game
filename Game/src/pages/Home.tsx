@@ -152,6 +152,10 @@ const Home: React.FC = () => {
           ))
         }
         <IonButton onClick={() => { modal.current?.dismiss() }}>Close</IonButton>
+        <a href={(()=>{
+          const file = new Blob([thread.map(x=>x.content).join("\n\n")], {type: 'text/plain'})
+          return URL.createObjectURL(file)
+        })()} download="history.txt">Download History</a>
         </IonContent>
       </IonModal>
       <IonHeader>
@@ -159,7 +163,7 @@ const Home: React.FC = () => {
           <IonTitle>Game</IonTitle>
           <IonButtons slot="end">
             <IonButton id="report">
-              Report
+              History
             </IonButton>
           </IonButtons>
         </IonToolbar>
