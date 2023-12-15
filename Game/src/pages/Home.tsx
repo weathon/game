@@ -3,29 +3,146 @@ import ExploreContainer from '../components/ExploreContainer';
 import './Home.css';
 import { useEffect, useState } from 'react';
 
-const Home: React.FC = () => {
+interface selection {
+  des: string
+  setImgUri: Function
+  setOpDes: Function
+  setDes: Function
+  thread: Array<any>
+  index: number
+}
 
+function SelectionButton(props: selection) {
+  let nextDes = ""
+  let nextImage = ""
+  //@ts-ignore
+  let nextOptions = []
+  const [disabled, setDisabled] = useState(true)
+  useEffect(() => {
+    props.thread.push({ "role": "user", "content": "User said: " + props.des })
+    fetch("https://api.openai.com/v1/chat/completions", {
+      method: "post",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer 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" },//forgot json 
+      body: JSON.stringify({
+        model: "gpt-4-1106-preview",
+        messages: props.thread,
+        // "stream": true
+      })
+    }).then(x=>x.json()).then(
+      x=>{
+        let msg = x.choices[0].message.content;
+        nextDes = msg.split("OPTIONS\n")[0]
+        nextOptions = msg.split("OPTIONS\n")[1].split("\n")
+        setDisabled(false)
+      }
+    )
+  }, [])
+  return (
+    <IonButton disabled={disabled} expand="block" onClick={(e) => {
+      // @ts-ignore
+      console.log(e.target.id)
+      props.setImgUri("");
+      //@ts-ignore
+      props.setOpDes([...nextOptions]);
+      props.setDes(nextDes);
+    }}>{props.des}</IonButton>
+  )
+}
+
+const Home: React.FC = () => {
+  const story = "This story involes a nice man is treating a lady very nicely, but then got accused that he harrased the women without any evidence. Then all his friends left him ..."
+  let thread = []
   const [imgUri, setImgUri] = useState("");
-  const [options, setOptions] = useState([]);
-  const [des, setDes] = useState("Loading...... Based on trafic it might take about 10 seconds.");
+  const [des, setDes] = useState("");
+  const [opDes, setOpDes] = useState<string[]>([])
   useEffect(() => {
     //gpt wrote the fetch
-    fetch("https://5000-weathon-game-44auy47bk06.ws-us105.gitpod.io/start")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
+    thread = [
+      {
+        "role": "system",
+        "content": `Create a decision-making game where you provide a linear narrative. The game should progress \
+        scene by scene and include a narrative and a list of choices. Do that one scene at a time, and generate new scene based on user respomse. \
+        Present the game description using following  format. Each time the text should be relatively short. 
+        AND ONLY OUTPUT ONE SENSE, THEN WAIT FOR USER's INPUT. DO NOT assume user make a choice!
+        **User can only make decision for one charatar**
+        You do not have to follow the choices and story line in the provided story! And give choices more than just what is provided. You must provide that magic phase "OPTIONS" before choice so the front end can split it correctly
+        Do not be too wordy, keep it around 50-100 words.
+        STORY: \n${story}
+        EXAMPLE, THE FORMAT HAS TO BE AS FOLLOWING! User want to read the story and choices Language: "`+ prompt("Enter language you want to use:") + `" (trad)
+        bla bla bla ...
+        
+        OPTIONS
+        1. Confess His Feelings in the Park 
+        2. Confess His Feelings on a Hill Overlooking the Town`
+      }
+    ];
+    fetch("https://api.openai.com/v1/chat/completions", {
+      method: "post",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer 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" },//forgot json 
+      body: JSON.stringify({
+        model: "gpt-4-1106-preview",
+        messages: thread,
+        "stream": true
       })
-      .then((data) => {
-        console.log(data); // Log the response data to the console
-        setImgUri(data.image_url)
-        setDes(data.text)
-        setOptions(data.choices)
-      })
-      .catch((error) => {
-        console.error("There was a problem with the fetch operation:", error);
-      });
+    }).then(response => {
+      const stream = response.body;
+      // @ts-ignore
+      const reader = stream.getReader();
+      let tmp = "";
+      let image_generated = false;
+      const readChunk = () => {
+        // Read a chunk from the reader
+        reader.read()
+          .then(({
+            value,
+            done
+          }) => {
+            if (done) {
+              thread.push({ "role": "assistant", "content": tmp })
+
+              console.log(tmp)
+              //@ts-ignore
+              setOpDes(tmp.split("OPTIONS\n")[1].split("\n"))
+              //@ts-ignore
+              // setOptions([...Array((opDes.length)).keys()].map(x=>"Option "+ (x+1)))
+              return
+            }
+            const chunkString = new TextDecoder().decode(value) as string;
+            chunkString.split("\n\n").map(x => x.slice(6, x.length + 1)).map(x => {
+              console.log(x)
+              if (x && x != "[DONE]" && JSON.parse(x).choices[0].delta.content) {
+                tmp = tmp + JSON.parse(x).choices[0].delta.content //cannot change on des because that is not changed in this function
+                // if (!tmp.includes("OPTIONS")) 
+                setDes(tmp)
+                {
+                  if (!image_generated) {
+                    image_generated = true;
+                    fetch("https://api.openai.com/v1/images/generations", {
+                      method: "post",
+                      headers: { "Content-Type": "application/json", "Authorization": "Bearer  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" },
+                      body: JSON.stringify({
+                        "model": "dall-e-3",
+                        "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting. There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + tmp,
+                        "n": 1,
+                        "size": "1792x1024",
+                        "style": "vivid"
+                      })
+                    }).then(x => x.json()).then(x => {
+                      console.log(x.data[0].url)
+                      setImgUri(x.data[0].url)
+                    })
+                  }
+                }
+              }
+              else
+                readChunk();
+
+            });
+          })
+      };
+      readChunk();
+    })
+
   }, [])
   return (
     <IonPage>
@@ -37,42 +154,18 @@ const Home: React.FC = () => {
       <IonContent fullscreen>
 
         <IonCard>
-          {imgUri!="" && <IonImg src={imgUri}></IonImg>}
+          {imgUri != "" && <IonImg src={imgUri}></IonImg>}
 
           <IonCardContent>
             <b>{des}</b>
           </IonCardContent>
         </IonCard>
-        {options.map((x, index)=>(
+        {
           // @ts-ignore
-            <IonButton expand="block" id={index+1} onClick={(e)=>{
-              // @ts-ignore
-              console.log(e.target.id)
-              setImgUri("");
-              setOptions([]);
-              setDes("Loading...... Based on trafic it might take about 10 seconds.");
-              // @ts-ignore
-
-              fetch("https://5000-weathon-game-44auy47bk06.ws-us105.gitpod.io/choice?choice="+e.target.id)
-              // fetch("https://5000-weathon-game-44auy47bk06.ws-us105.gitpod.io/choice?choice"+e.target.id)
-              .then((response) => {
-                if (!response.ok) {
-                  throw new Error("Network response was not ok");
-                }
-                return response.json();
-              })
-              .then((data) => {
-                console.log(data); // Log the response data to the console
-                setImgUri(data.image_url)
-                setDes(data.text)
-                setOptions(data.choices)
-              })
-              .catch((error) => {
-                console.error("There was a problem with the fetch operation:", error);
-              });
-
-            }}>{x}</IonButton>
-        ))}
+          opDes.map((x, index) => (
+            // @ts-ignore
+            <SelectionButton thread={thread} id={index} des={x} index={index} setDes={setDes} setImgUri={setImgUri} setOpDes={setOpDes}></SelectionButton>
+          ))}
       </IonContent>
     </IonPage>
   );
