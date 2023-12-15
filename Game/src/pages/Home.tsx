@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface selection {
   des: string
-  setImgUri: Function 
+  setImgUri: Function
   setOpDes: Function
   setDes: Function
   thread: any
@@ -41,20 +41,21 @@ function SelectionButton(props: selection) {
           headers: { "Content-Type": "application/json", "Authorization": "Bearer  " + localStorage.getItem("token") },
           body: JSON.stringify({
             "model": "dall-e-3",
-            "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting. There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + tmp,
+            "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting.\
+             There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + msg.split("OPTIONS\n")[0],
             "n": 1,
             "size": "1792x1024",
             "style": "vivid"
           })
         }).then(x => x.json()).then(x => {
           console.log(x.data[0].url)
-          nextImage.current(x.data[0].url)
+          nextImage.current = (x.data[0].url)
           setDisabled(false)
 
         })
       }
     )
-  }, [])
+  }, [props.des])
   return (
     <IonButton disabled={disabled} expand="block" onClick={(e) => {
       // @ts-ignore
@@ -74,6 +75,8 @@ const Home: React.FC = () => {
   const [des, setDes] = useState("");
   const [opDes, setOpDes] = useState<string[]>([])
   useEffect(() => {
+    if (!localStorage.getItem("token"))
+      localStorage.setItem("token", prompt("Token") as string)
     //gpt wrote the fetch
     // @ts-ignore
     thread.current = [
@@ -87,10 +90,9 @@ const Home: React.FC = () => {
         You do not have to follow the choices and story line in the provided story! And give choices more than just what is provided. You must provide that magic phase "OPTIONS" before choice so the front end can split it correctly
         Do not be too wordy, keep it around 50-100 words.
         STORY: \n${story}
-        NOW IS TEST MODE, ONLY SAY BLA BLA FOR STORY AND 1. xx,2: xx, for option
         
-        EXAMPLE, THE FORMAT HAS TO BE AS FOLLOWING! User want to read the story and choices Language: "`+ prompt("Enter language you want to use:") + `" (trad)
-        bla bla bla ... 
+        EXAMPLE: User want to read the story and choices Language: "`+ prompt("Enter language you want to use:") + `" (trad)
+        describe the scene here
         
         OPTIONS
         1. Confess His Feelings in the Park 
