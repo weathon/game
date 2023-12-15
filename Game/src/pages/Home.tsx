@@ -148,7 +148,7 @@ const Home: React.FC = () => {
         <IonContent>
         {
           thread.map((x, index)=>(
-            <IonCard>(x.role!="system") && <p key={index}>{x.content}<br/></p></IonCard>
+            <IonCard>{(x.role!="system") && <p key={index}>{x.content}<br/></p>}</IonCard>
           ))
         }
         <IonButton onClick={() => { modal.current?.dismiss() }}>Close</IonButton>
