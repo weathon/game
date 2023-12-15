@@ -63,6 +63,7 @@ function SelectionButton(props: selection) {
       props.setImgUri("");
       //@ts-ignore
       props.setOpDes([...nextOptions.current]);
+      props.setImgUri(nextImage.current)
       props.setDes(nextDes.current);
     }}>{props.des}</IonButton>
   )
