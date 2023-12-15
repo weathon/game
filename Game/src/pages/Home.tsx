@@ -145,12 +145,14 @@ const Home: React.FC = () => {
   return (
     <IonPage>
       <IonModal ref={modal} trigger='report'>
+        <IonContent>
         {
           thread.map((x, index)=>(
-            (x.role!="system") && <p key={index}>{x.content}<br/></p>
+            <IonCard>(x.role!="system") && <p key={index}>{x.content}<br/></p></IonCard>
           ))
         }
         <IonButton onClick={() => { modal.current?.dismiss() }}>Close</IonButton>
+        </IonContent>
       </IonModal>
       <IonHeader>
         <IonToolbar>
