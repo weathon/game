@@ -3,101 +3,17 @@ import ExploreContainer from '../components/ExploreContainer';
 import './Home.css';
 import { useEffect, useRef, useState } from 'react';
 
-interface selection {
-  des: string
-  setImgUri: Function
-  setOpDes: Function
-  setDes: Function
-  thread: any
-  index: number
-  setThread: Function
-  history: any
-}
-
-function SelectionButton(props: selection) {
-  let nextDes = useRef("")
-  let nextImage = useRef("")
-  //@ts-ignore
-  let nextOptions = useRef([])
-  const [disabled, setDisabled] = useState(true)
-  let thread = useRef([])
-  useEffect(() => {
-    setDisabled(true)
-
-    console.log(props.thread)
-    thread.current = [...props.thread]//this keep it private but failed to update the whole story
-    thread.current.push({ "role": "user", "content": "User said: " + props.des })
-    fetch("https://api.openai.com/v1/chat/completions", {
-      method: "post",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + localStorage.getItem("token") },//forgot json 
-      body: JSON.stringify({
-        model: "gpt-4-1106-preview",
-        messages: thread.current,
-        // "stream": true
-      })
-    }).then(x => x.json()).then(
-      x => {
-        let msg = x.choices[0].message.content;
-        console.log(msg)
-        nextDes.current = msg
-        thread.current.push({ "role": "assistant", "content": msg })
-
-        nextOptions.current = msg.split("OPTIONS\n")[1].split("\n")
-        fetch("https://api.openai.com/v1/images/generations", {
-          method: "post",
-          headers: { "Content-Type": "application/json", "Authorization": "Bearer  " + localStorage.getItem("token") },
-          body: JSON.stringify({
-            "model": "dall-e-3",
-            "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting.\
-             There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + msg.split("OPTIONS\n")[0],
-            "n": 1,
-            "size": "1024x1024",
-            "style": "vivid",
-            "response_format": "b64_json"
-          })
-        }).then(x => x.json()).then(x => {
-
-          console.log(x.data[0].b64_json)
-          nextImage.current = (x.data[0].b64_json)
-          setDisabled(false)
-
-        })
-      }
-    )
-  }, [props.des])
-  return (
-    <IonButton disabled={disabled} expand="block" onClick={(e) => {
-      // @ts-ignore
-      props.setThread([...thread.current])
-      console.log(e.target.id)
-      // props.setImgUri("data:image/png;base64,"+"");
-      //@ts-ignore
-      // setDisabled(true)
-
-      props.setOpDes([...nextOptions.current]);
-      props.setImgUri("data:image/png;base64," + nextImage.current)
-      props.setDes(nextDes.current);
-      // history.current.push({
-      //   "story"
-      // })
-    }}>{props.des}</IonButton>
-  )
-}
 
 const Home: React.FC = () => {
   const story = "This story involes a nice man is treating a lady very nicely and helped her a lot for academic work, but then got accused by the women that he harrased the women without any evidence. Then all his friends left him ... This whole thing is because she was jellus that boy 'took away' her ex-boyfriend: her ex boyfriend hang out with the main char all the time so that she felt being left alone. "
-  let thread = useRef()
+  // let thread = useRef()
+  const [thread, setThread] = useState<Array<any>>([])
   const [imgUri, setImgUri] = useState("");
   const [des, setDes] = useState("");
   const [opDes, setOpDes] = useState<string[]>([])
   const history = useRef([]);
-  useEffect(() => {
-    history.current = []
-    if (!localStorage.getItem("token"))
-      localStorage.setItem("token", prompt("Token") as string)
-    //gpt wrote the fetch
-    // @ts-ignore
-    thread.current = [
+  useEffect(()=>{
+    setThread([
       {
         "role": "system",
         "content": `Create a decision-making game where you provide a linear narrative. The game should progress \
@@ -116,13 +32,21 @@ const Home: React.FC = () => {
         1. Confess His Feelings in the Park 
         2. Confess His Feelings on a Hill Overlooking the Town`
       }
-    ];
+    ])
+  },[])
+  useEffect(() => {
+    history.current = []
+    if (!localStorage.getItem("token"))
+      localStorage.setItem("token", prompt("Token") as string)
+    //gpt wrote the fetch
+    // @ts-ignore
+;
     fetch("https://api.openai.com/v1/chat/completions", {
       method: "post",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + localStorage.getItem("token") },//forgot json 
       body: JSON.stringify({
         model: "gpt-4-1106-preview",
-        messages: thread.current,
+        messages: thread,
         "stream": true
       })
     }).then(response => {
@@ -148,7 +72,7 @@ const Home: React.FC = () => {
             chunkString.split("\n\n").map(x => x.slice(6, x.length + 1)).map(x => {
               console.log(x)
               if (x == "[DONE]") {
-                thread.current.push({ "role": "assistant", "content": tmp })
+                thread.push({ "role": "assistant", "content": tmp })
                 console.log(tmp)
                 //@ts-ignore
                 setOpDes(tmp.split("OPTIONS\n")[1].split("\n"))
@@ -156,20 +80,6 @@ const Home: React.FC = () => {
               if (x && x != "[DONE]" && JSON.parse(x).choices[0].delta.content) {
                 tmp = tmp + JSON.parse(x).choices[0].delta.content //cannot change on des because that is not changed in this function
                 setDes(tmp)
-                if (tmp.includes("OPTIONS"))  //keep this for following not above
-                {
-                  if (!image_generated) {
-                    image_generated = true;
-
-                    // @ts-ignore
-                    history.current.push({
-                      "story": tmp,
-                    })
-                    console.log(x.data[0].b64_json)
-
-
-                  }
-                }
 
               }
               else
@@ -181,7 +91,7 @@ const Home: React.FC = () => {
       readChunk();
     })
 
-  }, [])
+  }, [thread])
   const modal = useRef<HTMLIonModalElement>(null);
   return (
     <IonPage>
@@ -201,7 +111,7 @@ const Home: React.FC = () => {
       <IonContent fullscreen>
 
         <IonCard>
-          {imgUri != "" && <IonImg src={imgUri}></IonImg>}
+          {/* {imgUri != "" && <IonImg src={imgUri}></IonImg>} */}
 
           <IonCardContent>
             <b>{des}</b>
@@ -211,7 +121,13 @@ const Home: React.FC = () => {
           // @ts-ignore
           opDes.map((x, index) => (
             // @ts-ignore
-            <SelectionButton history={history} setThread={(t) => { thread.current = t }} thread={thread.current} id={index} des={x} index={index} setDes={setDes} setImgUri={setImgUri} setOpDes={setOpDes}></SelectionButton>
+            <IonButton onClick={() => {
+              thread.push({ "role": "user", "content": "User said: " + x })
+              setThread([...thread])
+              setOpDes([])
+
+              console.log(thread)
+            }}>{x}</IonButton>
           ))}
       </IonContent>
     </IonPage>
