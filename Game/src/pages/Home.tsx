@@ -98,7 +98,7 @@ const Home: React.FC = () => {
       <IonModal ref={modal} trigger='report'>
         {
           thread.map((x, index)=>(
-            (x.role!="system") || <p key={index}>{x.content}<br/></p>
+            (x.role!="system") && <p key={index}>{x.content}<br/></p>
           ))
         }
         <IonButton onClick={() => { modal.current?.dismiss() }}>Close</IonButton>
