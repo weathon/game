@@ -10,6 +10,7 @@ interface selection {
   setDes: Function
   thread: any
   index: number
+  setThread: Function
 }
 
 function SelectionButton(props: selection) {
@@ -18,16 +19,19 @@ function SelectionButton(props: selection) {
   //@ts-ignore
   let nextOptions = useRef([])
   const [disabled, setDisabled] = useState(true)
+  let thread = useRef([])
   useEffect(() => {
+    setDisabled(true)
+
     console.log(props.thread)
-    let thread = [...props.thread]
-    thread.push({ "role": "user", "content": "User said: " + props.des })
+    thread.current = [...props.thread]//this keep it private but failed to update the whole story
+    thread.current.push({ "role": "user", "content": "User said: " + props.des })
     fetch("https://api.openai.com/v1/chat/completions", {
       method: "post",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + localStorage.getItem("token") },//forgot json 
       body: JSON.stringify({
         model: "gpt-4-1106-preview",
-        messages: thread,
+        messages: thread.current,
         // "stream": true
       })
     }).then(x => x.json()).then(
@@ -35,6 +39,8 @@ function SelectionButton(props: selection) {
         let msg = x.choices[0].message.content;
         console.log(msg)
         nextDes.current = msg
+        thread.current.push({ "role": "assistant", "content": msg })
+
         nextOptions.current = msg.split("OPTIONS\n")[1].split("\n")
         fetch("https://api.openai.com/v1/images/generations", {
           method: "post",
@@ -60,11 +66,14 @@ function SelectionButton(props: selection) {
   return (
     <IonButton disabled={disabled} expand="block" onClick={(e) => {
       // @ts-ignore
+      props.setThread([...thread.current])
       console.log(e.target.id)
-      props.setImgUri("");
+      // props.setImgUri("data:image/png;base64,"+"");
       //@ts-ignore
+      // setDisabled(true)
+
       props.setOpDes([...nextOptions.current]);
-      props.setImgUri(nextImage.current)
+      props.setImgUri("data:image/png;base64,"+nextImage.current)
       props.setDes(nextDes.current);
     }}>{props.des}</IonButton>
   )
@@ -92,7 +101,7 @@ const Home: React.FC = () => {
         AND ONLY OUTPUT ONE SENSE, THEN WAIT FOR USER's INPUT. DO NOT assume user make a choice!
         **User can only make decision for one charatar**
         You do not have to follow the choices and story line in the provided story! And give choices more than just what is provided. You must provide that magic phase "OPTIONS" before choice so the front end can split it correctly
-        Do not be too wordy, keep it around 50-100 words. But each step should move the story forward not just keep asking questions.
+        Do not be too wordy, keep it around 100-200 words. But make sure each step will move the story forward a little
         STORY: \n${story}
         User want to read the story and choices Language: `+ prompt("Enter language you want to use:") + `
         EXAMPLE: 
@@ -164,7 +173,7 @@ const Home: React.FC = () => {
                         "image": x.data[0].b64_json
                       })
                       console.log(x.data[0].b64_json)
-                      setImgUri(x.data[0].b64_json)
+                      setImgUri("data:image/png;base64,"+x.data[0].b64_json)
                     })
                   }
                 }
@@ -209,7 +218,7 @@ const Home: React.FC = () => {
           // @ts-ignore
           opDes.map((x, index) => (
             // @ts-ignore
-            <SelectionButton thread={thread.current} id={index} des={x} index={index} setDes={setDes} setImgUri={setImgUri} setOpDes={setOpDes}></SelectionButton>
+            <SelectionButton setThread={(t)=>{thread.current=t}} thread={thread.current} id={index} des={x} index={index} setDes={setDes} setImgUri={setImgUri} setOpDes={setOpDes}></SelectionButton>
           ))}
       </IonContent>
     </IonPage>
