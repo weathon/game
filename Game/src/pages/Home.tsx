@@ -1,4 +1,4 @@
-import { IonButton, IonCard, IonCardContent, IonContent, IonHeader, IonImg, IonPage, IonTitle, IonToolbar } from '@ionic/react';
+import { IonButton, IonButtons, IonCard, IonCardContent, IonContent, IonHeader, IonImg, IonModal, IonPage, IonTitle, IonToolbar } from '@ionic/react';
 import ExploreContainer from '../components/ExploreContainer';
 import './Home.css';
 import { useEffect, useRef, useState } from 'react';
@@ -44,12 +44,13 @@ function SelectionButton(props: selection) {
             "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting.\
              There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + msg.split("OPTIONS\n")[0],
             "n": 1,
-            "size": "1792x1024",
-            "style": "vivid"
+            "size": "1024x1024",
+            "style": "vivid",
+            "response_format":"b64_json"
           })
         }).then(x => x.json()).then(x => {
-          console.log(x.data[0].url)
-          nextImage.current = (x.data[0].url)
+          console.log(x.data[0].b64_json)
+          nextImage.current = (x.data[0].b64_json)
           setDisabled(false)
 
         })
@@ -75,7 +76,9 @@ const Home: React.FC = () => {
   const [imgUri, setImgUri] = useState("");
   const [des, setDes] = useState("");
   const [opDes, setOpDes] = useState<string[]>([])
+  const history = useRef([]);
   useEffect(() => {
+    history.current = []
     if (!localStorage.getItem("token"))
       localStorage.setItem("token", prompt("Token") as string)
     //gpt wrote the fetch
@@ -89,10 +92,10 @@ const Home: React.FC = () => {
         AND ONLY OUTPUT ONE SENSE, THEN WAIT FOR USER's INPUT. DO NOT assume user make a choice!
         **User can only make decision for one charatar**
         You do not have to follow the choices and story line in the provided story! And give choices more than just what is provided. You must provide that magic phase "OPTIONS" before choice so the front end can split it correctly
-        Do not be too wordy, keep it around 50-100 words.
+        Do not be too wordy, keep it around 50-100 words. But each step should move the story forward not just keep asking questions.
         STORY: \n${story}
-        
-        EXAMPLE: User want to read the story and choices Language: "`+ prompt("Enter language you want to use:") + `" (trad)
+        User want to read the story and choices Language: `+ prompt("Enter language you want to use:") + `
+        EXAMPLE: 
         describe the scene here
         
         OPTIONS
@@ -150,12 +153,18 @@ const Home: React.FC = () => {
                         "model": "dall-e-3",
                         "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting. There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + tmp,
                         "n": 1,
-                        "size": "1792x1024",
-                        "style": "vivid"
+                        "size": "1024x1024",
+                        "style": "vivid",
+                        "response_format":"b64_json"
                       })
                     }).then(x => x.json()).then(x => {
-                      console.log(x.data[0].url)
-                      setImgUri(x.data[0].url)
+                      // @ts-ignore
+                      history.current.push({
+                        "story": tmp,
+                        "image": x.data[0].b64_json
+                      })
+                      console.log(x.data[0].b64_json)
+                      setImgUri(x.data[0].b64_json)
                     })
                   }
                 }
@@ -171,11 +180,20 @@ const Home: React.FC = () => {
     })
 
   }, [])
+  const modal = useRef<HTMLIonModalElement>(null);
   return (
     <IonPage>
+      <IonModal ref={modal} trigger='report'>
+          <IonButton onClick={()=>{modal.current?.dismiss()}}>Close</IonButton>
+      </IonModal>
       <IonHeader>
         <IonToolbar>
           <IonTitle>Game</IonTitle>
+          <IonButtons slot="end">
+            <IonButton id="report">
+              Report
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
