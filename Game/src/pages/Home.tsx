@@ -79,7 +79,8 @@ const Home: React.FC = () => {
         
         OPTIONS
         1. Confess His Feelings in the Park 
-        2. Confess His Feelings on a Hill Overlooking the Town`
+        2. Confess His Feelings on a Hill Overlooking the Town
+        Each screen should only be 50-100 words, story should not be smooth, should not always be happy or positive. Language do not be too formal. `
       }
     ])
   },[])
