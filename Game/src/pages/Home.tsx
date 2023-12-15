@@ -1,39 +1,57 @@
 import { IonButton, IonCard, IonCardContent, IonContent, IonHeader, IonImg, IonPage, IonTitle, IonToolbar } from '@ionic/react';
 import ExploreContainer from '../components/ExploreContainer';
 import './Home.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface selection {
   des: string
   setImgUri: Function
   setOpDes: Function
   setDes: Function
-  thread: Array<any>
+  thread: any
   index: number
 }
 
 function SelectionButton(props: selection) {
-  let nextDes = ""
-  let nextImage = ""
+  let nextDes = useRef("")
+  let nextImage = useRef("")
   //@ts-ignore
-  let nextOptions = []
+  let nextOptions = useRef([])
   const [disabled, setDisabled] = useState(true)
   useEffect(() => {
-    props.thread.push({ "role": "user", "content": "User said: " + props.des })
+    console.log(props.thread)
+    let thread = [...props.thread]
+    thread.push({ "role": "user", "content": "User said: " + props.des })
     fetch("https://api.openai.com/v1/chat/completions", {
       method: "post",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer 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" },//forgot json 
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + localStorage.getItem("token") },//forgot json 
       body: JSON.stringify({
         model: "gpt-4-1106-preview",
-        messages: props.thread,
+        messages: thread,
         // "stream": true
       })
-    }).then(x=>x.json()).then(
-      x=>{
+    }).then(x => x.json()).then(
+      x => {
         let msg = x.choices[0].message.content;
-        nextDes = msg.split("OPTIONS\n")[0]
-        nextOptions = msg.split("OPTIONS\n")[1].split("\n")
-        setDisabled(false)
+        console.log(msg)
+        nextDes.current = msg
+        nextOptions.current = msg.split("OPTIONS\n")[1].split("\n")
+        fetch("https://api.openai.com/v1/images/generations", {
+          method: "post",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer  " + localStorage.getItem("token") },
+          body: JSON.stringify({
+            "model": "dall-e-3",
+            "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting. There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + tmp,
+            "n": 1,
+            "size": "1792x1024",
+            "style": "vivid"
+          })
+        }).then(x => x.json()).then(x => {
+          console.log(x.data[0].url)
+          nextImage.current(x.data[0].url)
+          setDisabled(false)
+
+        })
       }
     )
   }, [])
@@ -43,21 +61,22 @@ function SelectionButton(props: selection) {
       console.log(e.target.id)
       props.setImgUri("");
       //@ts-ignore
-      props.setOpDes([...nextOptions]);
-      props.setDes(nextDes);
+      props.setOpDes([...nextOptions.current]);
+      props.setDes(nextDes.current);
     }}>{props.des}</IonButton>
   )
 }
 
 const Home: React.FC = () => {
   const story = "This story involes a nice man is treating a lady very nicely, but then got accused that he harrased the women without any evidence. Then all his friends left him ..."
-  let thread = []
+  let thread = useRef()
   const [imgUri, setImgUri] = useState("");
   const [des, setDes] = useState("");
   const [opDes, setOpDes] = useState<string[]>([])
   useEffect(() => {
     //gpt wrote the fetch
-    thread = [
+    // @ts-ignore
+    thread.current = [
       {
         "role": "system",
         "content": `Create a decision-making game where you provide a linear narrative. The game should progress \
@@ -68,8 +87,10 @@ const Home: React.FC = () => {
         You do not have to follow the choices and story line in the provided story! And give choices more than just what is provided. You must provide that magic phase "OPTIONS" before choice so the front end can split it correctly
         Do not be too wordy, keep it around 50-100 words.
         STORY: \n${story}
+        NOW IS TEST MODE, ONLY SAY BLA BLA FOR STORY AND 1. xx,2: xx, for option
+        
         EXAMPLE, THE FORMAT HAS TO BE AS FOLLOWING! User want to read the story and choices Language: "`+ prompt("Enter language you want to use:") + `" (trad)
-        bla bla bla ...
+        bla bla bla ... 
         
         OPTIONS
         1. Confess His Feelings in the Park 
@@ -78,10 +99,10 @@ const Home: React.FC = () => {
     ];
     fetch("https://api.openai.com/v1/chat/completions", {
       method: "post",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer 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" },//forgot json 
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + localStorage.getItem("token") },//forgot json 
       body: JSON.stringify({
         model: "gpt-4-1106-preview",
-        messages: thread,
+        messages: thread.current,
         "stream": true
       })
     }).then(response => {
@@ -98,11 +119,7 @@ const Home: React.FC = () => {
             done
           }) => {
             if (done) {
-              thread.push({ "role": "assistant", "content": tmp })
 
-              console.log(tmp)
-              //@ts-ignore
-              setOpDes(tmp.split("OPTIONS\n")[1].split("\n"))
               //@ts-ignore
               // setOptions([...Array((opDes.length)).keys()].map(x=>"Option "+ (x+1)))
               return
@@ -110,16 +127,22 @@ const Home: React.FC = () => {
             const chunkString = new TextDecoder().decode(value) as string;
             chunkString.split("\n\n").map(x => x.slice(6, x.length + 1)).map(x => {
               console.log(x)
+              if (x == "[DONE]") {
+                thread.current.push({ "role": "assistant", "content": tmp })
+                console.log(tmp)
+                //@ts-ignore
+                setOpDes(tmp.split("OPTIONS\n")[1].split("\n"))
+              }
               if (x && x != "[DONE]" && JSON.parse(x).choices[0].delta.content) {
                 tmp = tmp + JSON.parse(x).choices[0].delta.content //cannot change on des because that is not changed in this function
-                // if (!tmp.includes("OPTIONS")) 
                 setDes(tmp)
+                if (tmp.includes("OPTIONS"))  //keep this for following not above
                 {
                   if (!image_generated) {
                     image_generated = true;
                     fetch("https://api.openai.com/v1/images/generations", {
                       method: "post",
-                      headers: { "Content-Type": "application/json", "Authorization": "Bearer  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" },
+                      headers: { "Content-Type": "application/json", "Authorization": "Bearer  " + localStorage.getItem("token") },
                       body: JSON.stringify({
                         "model": "dall-e-3",
                         "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting. There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + tmp,
@@ -133,6 +156,7 @@ const Home: React.FC = () => {
                     })
                   }
                 }
+
               }
               else
                 readChunk();
@@ -164,7 +188,7 @@ const Home: React.FC = () => {
           // @ts-ignore
           opDes.map((x, index) => (
             // @ts-ignore
-            <SelectionButton thread={thread} id={index} des={x} index={index} setDes={setDes} setImgUri={setImgUri} setOpDes={setOpDes}></SelectionButton>
+            <SelectionButton thread={thread.current} id={index} des={x} index={index} setDes={setDes} setImgUri={setImgUri} setOpDes={setOpDes}></SelectionButton>
           ))}
       </IonContent>
     </IonPage>
