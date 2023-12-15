@@ -96,6 +96,11 @@ const Home: React.FC = () => {
   return (
     <IonPage>
       <IonModal ref={modal} trigger='report'>
+        {
+          thread.map((x, index)=>(
+            (x.role!="system") || <p key={index}>{x.content}<br/></p>
+          ))
+        }
         <IonButton onClick={() => { modal.current?.dismiss() }}>Close</IonButton>
       </IonModal>
       <IonHeader>
@@ -124,6 +129,7 @@ const Home: React.FC = () => {
             <IonButton onClick={() => {
               thread.push({ "role": "user", "content": "User said: " + x })
               setThread([...thread])
+              setDes("")
               setOpDes([])
 
               console.log(thread)
