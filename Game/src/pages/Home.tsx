@@ -55,13 +55,13 @@ const Home: React.FC = () => {
   
   The story of Walter, Esther, and Winchester was a testament to the resilience of the human spirit, the importance of true friendship, and the power of self-discovery in the face of adversity.
   `
-  
+
   const [thread, setThread] = useState<Array<any>>([])
   const [imgUri, setImgUri] = useState("");
   const [des, setDes] = useState("");
   const [opDes, setOpDes] = useState<string[]>([])
   const history = useRef([]);
-  useEffect(()=>{
+  useEffect(() => {
     setThread([
       {
         "role": "system",
@@ -83,14 +83,14 @@ const Home: React.FC = () => {
         Each screen should only be 50-100 words, story should not be smooth, should not always be happy or positive. Language do not be too formal. `
       }
     ])
-  },[])
+  }, [])
   useEffect(() => {
     history.current = []
     if (!localStorage.getItem("token"))
       localStorage.setItem("token", prompt("Token") as string)
-    //gpt wrote the fetch
-    // @ts-ignore
-;
+        //gpt wrote the fetch
+        // @ts-ignore
+        ;
     fetch("https://api.openai.com/v1/chat/completions", {
       method: "post",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + localStorage.getItem("token") },//forgot json 
@@ -147,16 +147,16 @@ const Home: React.FC = () => {
     <IonPage>
       <IonModal ref={modal} trigger='report'>
         <IonContent>
-        {
-          thread.map((x, index)=>(
-            <IonCard>{(x.role!="system") && <p key={index}>{x.content}<br/></p>}</IonCard>
-          ))
-        }
-        <IonButton onClick={() => { modal.current?.dismiss() }}>Close</IonButton>
-        <a href={(()=>{
-          const file = new Blob([thread.map(x=>x.content).join("\n\n")], {type: 'text/plain'})
-          return URL.createObjectURL(file)
-        })()} download="history.txt">Download History</a>
+          {
+            thread.map((x, index) => (
+              <IonCard>{(x.role != "system") && <p key={index}>{x.content}<br /></p>}</IonCard>
+            ))
+          }
+          <IonButton onClick={() => { modal.current?.dismiss() }}>Close</IonButton>
+          <a href={(() => {
+            const file = new Blob([thread.map(x => x.content).join("\n\n")], { type: 'text/plain' })
+            return URL.createObjectURL(file)
+          })()} download="history.txt">Download History</a>
         </IonContent>
       </IonModal>
       <IonHeader>
@@ -191,6 +191,14 @@ const Home: React.FC = () => {
               console.log(thread)
             }}>{x}</IonButton>
           ))}
+        <IonButton onClick={() => {
+          thread.push({ "role": "user", "content": "User said: " + prompt() })
+          setThread([...thread])
+          setDes("")
+          setOpDes([])
+
+          console.log(thread)
+        }}>Other Options</IonButton>
       </IonContent>
     </IonPage>
   );
