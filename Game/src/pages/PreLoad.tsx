@@ -53,10 +53,10 @@ function SelectionButton(props: selection) {
             "n": 1,
             "size": "1024x1024",
             "style": "vivid",
-            "response_format": "b64_json"
+            "response_format":"b64_json"
           })
         }).then(x => x.json()).then(x => {
-
+          
           console.log(x.data[0].b64_json)
           nextImage.current = (x.data[0].b64_json)
           setDisabled(false)
@@ -75,7 +75,7 @@ function SelectionButton(props: selection) {
       // setDisabled(true)
 
       props.setOpDes([...nextOptions.current]);
-      props.setImgUri("data:image/png;base64," + nextImage.current)
+      props.setImgUri("data:image/png;base64,"+nextImage.current)
       props.setDes(nextDes.current);
       // history.current.push({
       //   "story"
@@ -160,14 +160,26 @@ const Home: React.FC = () => {
                 {
                   if (!image_generated) {
                     image_generated = true;
-
-                    // @ts-ignore
-                    history.current.push({
-                      "story": tmp,
+                    fetch("https://api.openai.com/v1/images/generations", {
+                      method: "post",
+                      headers: { "Content-Type": "application/json", "Authorization": "Bearer  " + localStorage.getItem("token") },
+                      body: JSON.stringify({
+                        "model": "dall-e-3",
+                        "prompt": "Generate the following image, in real image style. Regretless the language of the prompt, draw it in a modern US setting. There should NOT be text on the image. The image should be a spefic photo not a abstract image. " + tmp,
+                        "n": 1,
+                        "size": "1024x1024",
+                        "style": "vivid",
+                        "response_format":"b64_json"
+                      })
+                    }).then(x => x.json()).then(x => {
+                      // @ts-ignore
+                      history.current.push({
+                        "story": tmp,
+                        "image": x.data[0].b64_json
+                      })
+                      console.log(x.data[0].b64_json)
+                      setImgUri("data:image/png;base64,"+x.data[0].b64_json)
                     })
-                    console.log(x.data[0].b64_json)
-
-
                   }
                 }
 
@@ -186,7 +198,7 @@ const Home: React.FC = () => {
   return (
     <IonPage>
       <IonModal ref={modal} trigger='report'>
-        <IonButton onClick={() => { modal.current?.dismiss() }}>Close</IonButton>
+          <IonButton onClick={()=>{modal.current?.dismiss()}}>Close</IonButton>
       </IonModal>
       <IonHeader>
         <IonToolbar>
@@ -211,7 +223,7 @@ const Home: React.FC = () => {
           // @ts-ignore
           opDes.map((x, index) => (
             // @ts-ignore
-            <SelectionButton history={history} setThread={(t) => { thread.current = t }} thread={thread.current} id={index} des={x} index={index} setDes={setDes} setImgUri={setImgUri} setOpDes={setOpDes}></SelectionButton>
+            <SelectionButton history={history} setThread={(t)=>{thread.current=t}} thread={thread.current} id={index} des={x} index={index} setDes={setDes} setImgUri={setImgUri} setOpDes={setOpDes}></SelectionButton>
           ))}
       </IonContent>
     </IonPage>
