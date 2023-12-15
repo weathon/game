@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface selection {
   des: string
-  setImgUri: Function
+  setImgUri: Function 
   setOpDes: Function
   setDes: Function
   thread: any
